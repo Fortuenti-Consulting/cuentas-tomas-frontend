@@ -8,10 +8,12 @@ import { ExportPage } from './pages/ExportPage'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { ToastProvider } from './components/Toast'
 
 function App() {
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -66,6 +68,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </ErrorBoundary>
   )
 }

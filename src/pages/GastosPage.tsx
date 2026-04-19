@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
+import { Receipt, Plus } from 'lucide-react'
 import { formatCOP } from '../utils/currency'
-import { Header } from '../components/Header'
-import { Sidebar } from '../components/Sidebar'
+import { formatDateShort } from '../utils/date'
+import { Layout } from '../components/Layout'
+import { EmptyState } from '../components/EmptyState'
+import { useToast } from '../components/Toast'
+import { SkeletonPage } from '../components/Skeleton'
 import apiClient from '../services/api'
 
 interface Category {
@@ -35,6 +39,7 @@ interface User {
 }
 
 export const GastosPage = () => {
+  const { toast } = useToast()
   const [categories, setCategories] = useState<Category[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -131,10 +136,11 @@ export const GastosPage = () => {
         useFileUpload: false,
       })
       setShowForm(false)
+      toast('Gasto registrado. Esperando aprobación.', 'success')
       await loadData()
     } catch (error) {
       console.error('Error creating expense:', error)
-      alert('Error al crear el gasto')
+      toast('Error al crear el gasto', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -156,10 +162,14 @@ export const GastosPage = () => {
       setAckingExpenseId(null)
       setAckAction('accept')
       setAckComment('')
+      toast(
+        ackAction === 'accept' ? 'Gasto aprobado' : 'Gasto disputado',
+        ackAction === 'accept' ? 'success' : 'info'
+      )
       await loadData()
     } catch (error) {
       console.error('Error acknowledging expense:', error)
-      alert('Error al procesar el gasto')
+      toast('Error al procesar el gasto', 'error')
     } finally {
       setAckLoading(false)
     }
@@ -201,16 +211,9 @@ export const GastosPage = () => {
 
   if (loading && !showForm) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-2xl font-bold text-indigo-600">Cuentas Tomás</h1>
-          </div>
-        </nav>
-        <div className="flex justify-center items-center h-96">
-          <p>Cargando...</p>
-        </div>
-      </div>
+      <Layout>
+        <SkeletonPage cards={0} />
+      </Layout>
     )
   }
 
@@ -218,34 +221,39 @@ export const GastosPage = () => {
     statusFilter === 'todas' ? expenses : expenses.filter((e) => e.status === statusFilter)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      <div className="flex max-w-7xl mx-auto">
-        <Sidebar />
-
-        <main className="flex-1 p-8">
-          <div className="space-y-8">
-            {/* Header */}
-            <div className="bg-white rounded-lg shadow-md p-6 flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Gastos</h2>
-                <p className="text-gray-600 text-sm">Registro y aprobación de gastos compartidos</p>
-              </div>
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-              >
-                {showForm ? 'Cancelar' : 'Nuevo gasto'}
-              </button>
-            </div>
+    <Layout>
+      <div className="space-y-5 sm:space-y-6">
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Gastos</h2>
+            <p className="text-gray-600 text-sm mt-1">
+              Registro y aprobación de gastos compartidos
+            </p>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          >
+            {showForm ? (
+              'Cancelar'
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                Nuevo gasto
+              </>
+            )}
+          </button>
+        </div>
 
             {/* Submission Form */}
             {showForm && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">Registrar nuevo gasto</h3>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
+                  Registrar nuevo gasto
+                </h3>
                 <form onSubmit={handleSubmitExpense} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Categoria *
@@ -415,21 +423,21 @@ export const GastosPage = () => {
             )}
 
             {/* Status Filter */}
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex gap-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 sm:p-4">
+              <div className="flex gap-2 flex-wrap">
                 {[
                   { value: 'todas', label: 'Todos' },
-                  { value: 'pending_ack', label: 'Pendientes de aprobación' },
+                  { value: 'pending_ack', label: 'Pendientes' },
                   { value: 'accepted', label: 'Aprobados' },
                   { value: 'disputed', label: 'Disputados' },
                 ].map((status) => (
                   <button
                     key={status.value}
                     onClick={() => setStatusFilter(status.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                       statusFilter === status.value
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     {status.label}
@@ -439,41 +447,54 @@ export const GastosPage = () => {
             </div>
 
             {/* Expenses List */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
               {filteredExpenses.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No hay gastos que mostrar</div>
+                <EmptyState
+                  Icon={Receipt}
+                  title="Aún no hay gastos compartidos"
+                  message="Cuando registres un gasto como médico o terapia, aparecerá aquí esperando aprobación de la otra parte."
+                  action={
+                    !showForm && (
+                      <button
+                        onClick={() => setShowForm(true)}
+                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Nuevo gasto
+                      </button>
+                    )
+                  }
+                />
               ) : (
-                <div className="divide-y">
+                <div className="divide-y divide-gray-100">
                   {filteredExpenses.map((expense) => (
                     <div key={expense.id}>
                       <div
-                        className="p-6 hover:bg-gray-50 cursor-pointer"
+                        className="p-4 sm:p-6 hover:bg-gray-50 cursor-pointer transition-colors"
                         onClick={() =>
                           setExpandedExpenseId(
                             expandedExpenseId === expense.id ? null : expense.id
                           )
                         }
                       >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">{expense.concept}</h4>
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900 truncate">{expense.concept}</h4>
                             <p className="text-sm text-gray-600">
-                              {new Date(expense.incurred_date).toLocaleDateString('es-CO')}
+                              {formatDateShort(expense.incurred_date)}
                             </p>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-bold text-gray-900">
-                                {formatCOP(expense.amount_cop)}
-                              </p>
-                              <span
-                                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadgeColor(
-                                  expense.status
-                                )}`}
-                              >
-                                {statusLabel(expense.status)}
-                              </span>
-                            </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-bold text-gray-900 text-sm sm:text-base">
+                              {formatCOP(expense.amount_cop)}
+                            </p>
+                            <span
+                              className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeColor(
+                                expense.status
+                              )}`}
+                            >
+                              {statusLabel(expense.status)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -632,9 +653,7 @@ export const GastosPage = () => {
                 </div>
               )}
             </div>
-          </div>
-        </main>
       </div>
-    </div>
+    </Layout>
   )
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Check, AlertCircle } from 'lucide-react'
 import api from '../services/api'
+import { useToast } from './Toast'
 
 interface InlineAckButtonsProps {
   expenseId: string
@@ -7,6 +9,7 @@ interface InlineAckButtonsProps {
 }
 
 export const InlineAckButtons = ({ expenseId, onSuccess }: InlineAckButtonsProps) => {
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showComment, setShowComment] = useState<'accept' | 'dispute' | null>(null)
@@ -25,9 +28,15 @@ export const InlineAckButtons = ({ expenseId, onSuccess }: InlineAckButtonsProps
         action,
         comment: comment || undefined,
       })
+      toast(
+        action === 'accept' ? 'Gasto aprobado' : 'Gasto disputado',
+        action === 'accept' ? 'success' : 'info'
+      )
       onSuccess()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error al procesar el gasto')
+      const msg = err.response?.data?.detail || 'Error al procesar el gasto'
+      setError(msg)
+      toast(msg, 'error')
     } finally {
       setLoading(false)
     }
@@ -74,15 +83,17 @@ export const InlineAckButtons = ({ expenseId, onSuccess }: InlineAckButtonsProps
       <button
         onClick={() => handleAck('accept')}
         disabled={loading}
-        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1"
       >
+        <Check className="w-4 h-4" />
         {loading ? 'Procesando...' : 'Aceptar'}
       </button>
       <button
         onClick={() => setShowComment('dispute')}
         disabled={loading}
-        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
       >
+        <AlertCircle className="w-4 h-4" />
         Disputar
       </button>
     </div>
